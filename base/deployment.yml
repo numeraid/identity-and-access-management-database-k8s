@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: iam-mssql-server
+  namespace: numeraid-data
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: iam-mssql-server
+  template:
+    metadata:
+      labels:
+        app: iam-mssql-server
+    spec:
+      containers:
+        - name: iam-mssql-server
+          image: ghcr.io/numeraid/identity-and-access-management-database-container:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 1433
+              name: mssql
+          env:
+            - name: ACCEPT_EULA
+              value: "Y"
+            - name: MSSQL_SA_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: iam-mssql-server-secret
+                  key: MSSQL_SA_PASSWORD
+            - name: MSSQL_PID
+              value: "Developer"
+            - name: MSSQL_TCP_PORT
+              value: "1433"
+          volumeMounts:
+            - name: iam-mssql-server-data
+              mountPath: /var/opt/mssql
+          resources:
+            requests:
+              memory: "2Gi"
+              cpu: "1"
+            limits:
+              memory: "4Gi"
+              cpu: "2"
+          readinessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket:
+              port: 1433
+            initialDelaySeconds: 30
+            periodSeconds: 20
+      volumes:
+        - name: iam-mssql-server-data
+          persistentVolumeClaim:
+            claimName: iam-mssql-server-data
