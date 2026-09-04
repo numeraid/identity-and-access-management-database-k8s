@@ -5,6 +5,8 @@ metadata:
   namespace: numeraid-data
 spec:
   replicas: 1
+  strategy:
+    type: Recreate
   selector:
     matchLabels:
       app: iam-mssql-server
@@ -13,6 +15,11 @@ spec:
       labels:
         app: iam-mssql-server
     spec:
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
       containers:
         - name: iam-mssql-server
           image: ghcr.io/numeraid/identity-and-access-management-database-container:latest
@@ -35,6 +42,11 @@ spec:
           volumeMounts:
             - name: iam-mssql-server-data
               mountPath: /var/opt/mssql
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               memory: "2Gi"
@@ -42,16 +54,35 @@ spec:
             limits:
               memory: "4Gi"
               cpu: "2"
+          startupProbe:
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b
+            failureThreshold: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
           readinessProbe:
-            tcpSocket:
-              port: 1433
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b
             initialDelaySeconds: 20
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 6
           livenessProbe:
-            tcpSocket:
-              port: 1433
-            initialDelaySeconds: 30
+            exec:
+              command:
+                - /bin/bash
+                - -c
+                - /opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "$MSSQL_SA_PASSWORD" -C -Q "SELECT 1" -b
+            initialDelaySeconds: 60
             periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 6
       volumes:
         - name: iam-mssql-server-data
           persistentVolumeClaim:

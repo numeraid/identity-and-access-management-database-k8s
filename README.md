@@ -38,14 +38,15 @@ kubectl apply -f base/service.yml
 
 Important configuration notes
 
-- Secrets: `base/secret.yml` contains `MSSQL_SA_PASSWORD: "CHANGE_ME"`. Replace this with a secure password before applying, or create the secret using:
+- Secrets: `base/secret.yml` includes a template password that is intentionally non-production. Replace it with a strong password before applying, or generate the secret out-of-band using:
 
 ```bash
-kubectl create secret generic iam-mssql-server-secret --from-literal=MSSQL_SA_PASSWORD='<your-password>' -n numeraid-data
+kubectl create secret generic iam-mssql-server-secret --from-literal=MSSQL_SA_PASSWORD='<your-strong-password>' -n numeraid-data
 ```
 
-- Storage: `base/pvc.yml` requests `10Gi`. Confirm your cluster's StorageClass can satisfy the claim or edit the file to specify a `storageClassName`.
+- Storage: `base/pvc.yml` requests `10Gi`. Confirm your cluster's StorageClass can satisfy the claim or edit the file to specify a `storageClassName` for your environment.
 - Image: The deployment uses `ghcr.io/numeraid/identity-and-access-management-database-container:latest`. Ensure the image is accessible from your cluster (private registry auth may be required).
+- Startup behaviour: the deployment includes a SQL-based `startupProbe`, `readinessProbe`, and `livenessProbe` so the database doesn't get marked ready before it can accept connections.
 
 Files and purpose
 
